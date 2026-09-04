@@ -1,0 +1,35 @@
+# Build directories
+build/
+build_*/
+*/build/
+
+# CMake user/config
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Compiled artifacts
+*.exe
+*.obj
+*.lib
+*.dll
+*.pdb
+*.exp
+
+# CUDA build output
+cuda/fg_cuda_proof.exe
+
+# Persisted state / runtime dumps
+*.bin
+*.tmp
+fg_mp_state_*.bin
+
+# IDE / OS
+.vs/
+.vscode/
+.idea/
+Thumbs.db
+
+# CTest / test output
+Testing/
+lastTest.log

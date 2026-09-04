@@ -1,0 +1,2 @@
+add_executable(fg_benchmarks fg_benchmarks.cpp)
+target_link_libraries(fg_benchmarks PRIVATE FragmentationGovernor)
