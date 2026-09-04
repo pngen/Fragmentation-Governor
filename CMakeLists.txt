@@ -43,12 +43,13 @@ if(WIN32)
 endif()
 
 if(FG_ASAN)
+  # Apply to every first-party target (library + tests/tools/examples/benchmarks).
   if(MSVC)
-    target_compile_options(FragmentationGovernor PRIVATE /fsanitize=address)
-    target_link_options(FragmentationGovernor PRIVATE /fsanitize=address)
+    add_compile_options(/fsanitize=address)
+    add_link_options(/fsanitize=address)
   else()
-    target_compile_options(FragmentationGovernor PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-    target_link_options(FragmentationGovernor PRIVATE -fsanitize=address)
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
   endif()
 endif()
 
