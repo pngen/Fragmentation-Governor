@@ -51,7 +51,7 @@ Fragmentation is modeled as a relationship between **resource shape / workload s
 - **Framed protocol.** Checksummed frame format with bounded payloads, invalid-enum rejection, trailing-garbage rejection, and a streaming decoder tolerant of partial reads/writes.
 - **Coordinator.** Generation-fenced in-process coordinator plus a real loopback TCP server driving registration, publication, snapshot assembly, fit, planning, execution, verification, worker-death handling, and recovery.
 - **Real multiprocess proof.** Separate coordinator and two worker OS processes over framed TCP: primary distributed scenario, real OS-process worker death (plan degrades to REVALIDATION_REQUIRED, stale WorkerBootId publish rejected), and coordinator restart (durable state recovered, dynamic evidence revalidated).
-- **CUDA proof on RTX 5090 / sm_120.** Scenarios A (controlled fragmentation, DERIVED), B (release remediation with kernel CPU parity), C (governed application-level relocation), D (protected refusal / NO_BENEFICIAL_ACTION), E (stale authority rejection), G (coordinator restart + revalidation). Device memory verified to return to baseline. No claim of CUDA-internal free-list state (not observable) or driver-level compaction.
+- **CUDA proof on RTX 5090 / sm_120.** Scenarios A (controlled fragmentation, DERIVED), B (release remediation with kernel CPU parity), C (governed application-level relocation), D (protected refusal / NO_BENEFICIAL_ACTION), E (stale authority rejection), F (real CUDA worker OS-process death and revalidation), G (coordinator restart + revalidation). Device memory verified to return to baseline. No claim of CUDA-internal free-list state (not observable), driver compaction, or driver memory relocation.
 
 ## Repository layout
 

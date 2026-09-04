@@ -33,3 +33,4 @@ Thumbs.db
 # CTest / test output
 Testing/
 lastTest.log
+build-*/

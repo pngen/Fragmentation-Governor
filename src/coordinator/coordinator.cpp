@@ -57,7 +57,8 @@ bool Coordinator::can_execute(const RemediationPlan& p, const Message& in) const
   if (p.policy_generation != policy_generation_) return false;
   if (p.epoch != epoch_) return false;
   if (p.state == PlanState::SUPERSEDED || p.state == PlanState::CANCELLED ||
-      p.state == PlanState::ABORTED || p.state == PlanState::RETIRED) return false;
+      p.state == PlanState::ABORTED || p.state == PlanState::RETIRED ||
+      p.state == PlanState::REVALIDATION_REQUIRED || p.state == PlanState::BLOCKED) return false;
   return true;
 }
 

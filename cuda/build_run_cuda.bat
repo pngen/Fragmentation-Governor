@@ -12,8 +12,16 @@ if not defined CUDA_PATH ( echo CUDA_PATH_NOT_SET & exit /b 1 )
 set NVCC=%CUDA_PATH%\bin\nvcc.exe
 if not exist "%NVCC%" ( echo NVCC_NOT_FOUND & exit /b 1 )
 set ROOT=%~dp0..
+set FG_LIB=%ROOT%\build\Release\FragmentationGovernor.lib
 pushd "%ROOT%\cuda"
-"%NVCC%" -arch=sm_120 -std=c++20 -Xcompiler /MD -I"%ROOT%\include" fg_cuda_proof.cu "%ROOT%\build\Release\FragmentationGovernor.lib" -o fg_cuda_proof.exe
-if errorlevel 1 ( echo NVCC_BUILD_FAILED & popd & exit /b 1 )
-echo NVCC_BUILD_OK
+echo --- building fg_cuda_proof ---
+"%NVCC%" -arch=sm_120 -std=c++20 -Xcompiler /MD -I"%ROOT%\include" fg_cuda_proof.cu "%FG_LIB%" -o fg_cuda_proof.exe
+if errorlevel 1 ( echo NVCC_PROOF_FAILED & popd & exit /b 1 )
+echo --- building fg_cuda_worker ---
+"%NVCC%" -arch=sm_120 -std=c++20 -Xcompiler /MD -I"%ROOT%\include" fg_cuda_worker.cu "%FG_LIB%" ws2_32.lib -o fg_cuda_worker.exe
+if errorlevel 1 ( echo NVCC_WORKER_FAILED & popd & exit /b 1 )
+echo --- building fg_cuda_scenario_f ---
+"%NVCC%" -arch=sm_120 -std=c++20 -Xcompiler /MD -I"%ROOT%\include" fg_cuda_scenario_f.cu "%FG_LIB%" ws2_32.lib -o fg_cuda_scenario_f.exe
+if errorlevel 1 ( echo NVCC_SCENARIOF_FAILED & popd & exit /b 1 )
+echo NVCC_CUDA_BUILDS_OK
 popd

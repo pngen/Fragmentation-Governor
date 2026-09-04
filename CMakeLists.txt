@@ -27,6 +27,17 @@ else()
   add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 endif()
 
+if(FG_ASAN)
+  # ASan needs debug info (C5072) and the debug runtime; /Zi /DEBUG emit symbols.
+  if(MSVC)
+    add_compile_options(/fsanitize=address /Zi)
+    add_link_options(/INFERASANLIBS /DEBUG)
+  else()
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+  endif()
+endif()
+
 # ---- library ---------------------------------------------------------------
 file(GLOB_RECURSE FG_CORE_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
@@ -45,8 +56,9 @@ endif()
 if(FG_ASAN)
   # Apply to every first-party target (library + tests/tools/examples/benchmarks).
   if(MSVC)
-    add_compile_options(/fsanitize=address)
-    add_link_options(/fsanitize=address)
+    # ASan needs debug info (C5072) and the debug runtime; /Zi /DEBUG emit symbols.
+    add_compile_options(/fsanitize=address /Zi)
+    add_link_options(/fsanitize=address /DEBUG)
   else()
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
     add_link_options(-fsanitize=address)
