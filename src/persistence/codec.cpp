@@ -90,6 +90,8 @@ class Reader {
 
 double check_finite(double v, const char* which, Reader& r) {
   if (!std::isfinite(v)) { r.ok = false; r.err = std::string(which) + " non-finite"; return 0.0; }
+  // Plan scores are HealthyScore values: outside [0,1] recovery would throw.
+  if (v < 0.0 || v > 1.0) { r.ok = false; r.err = std::string(which) + " out of [0,1]"; return 0.0; }
   return v;
 }
 

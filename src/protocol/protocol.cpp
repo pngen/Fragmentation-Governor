@@ -201,7 +201,7 @@ std::vector<std::uint8_t> encode_payload(const Message& msg) {
   return out;
 }
 
-std::optional<Message> decode_payload(const std::uint8_t* data, size_t len) {
+static std::optional<Message> decode_payload_unchecked(const std::uint8_t* data, size_t len) {
   PReader r(data, len);
   Message m;
   std::uint8_t t = r.u8();
@@ -237,6 +237,16 @@ std::optional<Message> decode_payload(const std::uint8_t* data, size_t len) {
   if (!r.ok) return std::nullopt;
   if (r.pos != len) return std::nullopt;
   return m;
+}
+
+std::optional<Message> decode_payload(const std::uint8_t* data, size_t len) {
+  // Value types such as HealthyScore throw on out-of-range input; a malformed
+  // payload is rejected here rather than escaping the transport's thread.
+  try {
+    return decode_payload_unchecked(data, len);
+  } catch (const ValueError&) {
+    return std::nullopt;
+  }
 }
 
 std::vector<std::uint8_t> frame_encode(const Message& msg) {

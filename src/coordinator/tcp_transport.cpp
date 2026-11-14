@@ -155,16 +155,21 @@ void TcpServer::serve() {
       FrameDecoder dec;
       std::uint8_t buf[4096];
       std::uint64_t conn_worker = 0;
+      std::uint64_t conn_boot = 0;
       while (true) {
         int n = ::recv(cs, reinterpret_cast<char*>(buf), static_cast<int>(sizeof(buf)), 0);
         if (n <= 0) break;
         auto msg = dec.feed(buf, static_cast<size_t>(n));
         if (!msg.has_value()) continue;
-        if (msg->type == MsgType::REGISTER) conn_worker = msg->worker_id;
         std::vector<Message> replies;
         {
           std::lock_guard<std::mutex> g(impl_->mu);
           replies = coord_.handle(*msg);
+          // Only an accepted REGISTER binds this connection to an incarnation.
+          if (msg->type == MsgType::REGISTER && !replies.empty() && replies.front().ok) {
+            conn_worker = msg->worker_id;
+            conn_boot = msg->worker_boot;
+          }
         }
         for (const auto& r : replies) {
           std::vector<std::uint8_t> frame = frame_encode(r);
@@ -174,7 +179,7 @@ void TcpServer::serve() {
       ::closesocket(cs);
       if (conn_worker != 0) {
         std::lock_guard<std::mutex> g(impl_->mu);
-        coord_.mark_worker_dead(WorkerId(conn_worker));
+        coord_.mark_worker_dead(WorkerId(conn_worker), WorkerBootId(conn_boot));
       }
     });
   }

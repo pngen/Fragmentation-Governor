@@ -22,7 +22,8 @@ endif()
 
 # ---- strict warnings (applies to every first-party target) -----------------
 if(MSVC)
-  add_compile_options(/W4 /WX /permissive- /Zc:__cplusplus)
+  # C++ only: nvcc takes these MSVC switches for input files and stops.
+  add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:/W4;/WX;/permissive-;/Zc:__cplusplus>")
 else()
   add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 endif()

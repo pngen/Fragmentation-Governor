@@ -53,6 +53,9 @@ class Coordinator {
 
   // ---- worker liveness -----------------------------------------------------
   void mark_worker_dead(WorkerId worker);
+  /// Fences incarnation `boot` of `worker` only; a newer incarnation that has
+  /// registered since keeps its authority.
+  void mark_worker_dead(WorkerId worker, WorkerBootId boot);
 
  private:
   CoordinatorEpoch epoch_;
@@ -70,6 +73,7 @@ class Coordinator {
   // plan lifecycle helpers
   bool can_execute(const RemediationPlan& p, const Message& in) const;
   WorkloadDemand last_demand_;
+  std::map<FragmentationPlanId, WorkloadDemand> plan_demands_;  // demand each plan was created for
   Message ack() const { Message m; m.type = MsgType::ERROR; return m; }
   Message fail(std::string why) const;
   void advance_resource_generation();

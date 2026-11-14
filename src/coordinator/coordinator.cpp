@@ -52,6 +52,11 @@ void Coordinator::mark_worker_dead(WorkerId worker) {
   // Reject stale dynamic evidence by not treating dead-worker resources as current.
 }
 
+void Coordinator::mark_worker_dead(WorkerId worker, WorkerBootId boot) {
+  auto it = worker_boot_.find(worker);
+  if (it != worker_boot_.end() && it->second == boot) mark_worker_dead(worker);
+}
+
 bool Coordinator::can_execute(const RemediationPlan& p, const Message& in) const {
   if (p.generation.value() != in.plan_gen) return false;
   if (p.policy_generation != policy_generation_) return false;
@@ -137,6 +142,11 @@ std::vector<Message> Coordinator::handle(const Message& in) {
       // Fresh incarnation detection: a different boot id on a known worker means
       // the previous incarnation's evidence is stale.
       auto it = worker_boot_.find(WorkerId(in.worker_id));
+      // WorkerBootId is a generation: an older incarnation must not displace a
+      // newer one (its replayed REGISTER would revive stale authority).
+      if (it != worker_boot_.end() && in.worker_boot < it->second.value()) {
+        return {fail("stale WorkerBootId")};
+      }
       if (it != worker_boot_.end() && it->second.value() != in.worker_boot) {
         mark_worker_dead(WorkerId(in.worker_id));
       }
@@ -151,6 +161,11 @@ std::vector<Message> Coordinator::handle(const Message& in) {
       Resource res = in.resource;
       res.device = res.device.is_null() ? DeviceId(WorkerId(in.worker_id).value()) : res.device;
       if (resources_.count(res.id)) {
+        // A live worker's resource cannot be taken over by another worker: the
+        // replacement record would discard the owner's allocations.
+        if (resources_[res.id].worker != WorkerId(in.worker_id) && resources_[res.id].alive) {
+          return {fail("cross-worker resource claim")};
+        }
         if (resources_[res.id].resource.generation.value() >= res.generation.value()) {
           return {fail("stale ResourceGeneration")};
         }
@@ -190,6 +205,7 @@ std::vector<Message> Coordinator::handle(const Message& in) {
       if (alive == worker_alive_.end() || !alive->second) return {fail("unregistered/dead worker")};
       if (worker_boot_[WorkerId(in.worker_id)].value() != in.worker_boot) return {fail("stale WorkerBootId")};
       if (resources_.count(in.resource.id) == 0) return {fail("unknown resource")};
+      if (resources_[in.resource.id].worker != WorkerId(in.worker_id)) return {fail("cross-worker resource claim")};
       std::string err;
       if (!resources_[in.resource.id].layout.insert_allocation(in.allocation, err)) {
         return {fail("allocation rejected: " + err)};
@@ -246,6 +262,7 @@ std::vector<Message> Coordinator::handle(const Message& in) {
       plan->state = PlanState::PLAN_READY;
       plans_[plan->id] = *plan;
       before_snapshots_[plan->id] = s;
+      plan_demands_[plan->id] = in.demand;
       next_plan_id_ = plan->id.value() + 1;
       Message m; m.type = MsgType::PLAN_RESULT; m.ok = true; m.plan = *plan;
       return {m};
@@ -254,6 +271,11 @@ std::vector<Message> Coordinator::handle(const Message& in) {
       auto it = plans_.find(FragmentationPlanId(in.plan_id));
       if (it == plans_.end()) return {fail("unknown plan")};
       if (it->second.state == PlanState::SUPERSEDED) return {fail("plan superseded")};
+      // Only a ready plan is approved: approval must not revive a cancelled,
+      // finished, failed or revalidation-required plan for execution.
+      if (it->second.state != PlanState::PLAN_READY && it->second.state != PlanState::APPROVED) {
+        return {fail("plan cannot be approved from " + std::string(to_string(it->second.state)))};
+      }
       if (it->second.policy_generation != policy_generation_) return {fail("stale PolicyGeneration")};
       it->second.state = PlanState::APPROVED;
       Message a; a.type = MsgType::ERROR; a.ok = true; return {a};
@@ -298,7 +320,10 @@ std::vector<Message> Coordinator::handle(const Message& in) {
       FragmentationSnapshot after = assemble_snapshot();
       // Recompute fit-based verification using a minimal demand placeholder.
       // The verification uses the before/after comparison for stranded + fit.
-      WorkloadDemand dem = last_demand_;
+      // Verify against the demand this plan was created for, not the latest one.
+      auto dit = plan_demands_.find(it->first);
+      if (dit == plan_demands_.end()) return {fail("no demand recorded for plan")};
+      WorkloadDemand dem = dit->second;
       VerificationResult v = verify_remediation(bit->second, after, dem, it->second);
       it->second.verification = v.outcome;
       if (v.outcome == VerificationOutcome::TARGET_FIT_ACHIEVED ||

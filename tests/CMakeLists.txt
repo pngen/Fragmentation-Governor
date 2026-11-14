@@ -21,3 +21,10 @@ add_test(NAME fg_multiprocess_proof COMMAND fg_multiprocess_proof
 add_executable(fg_adversarial_test adversarial/fg_adversarial_test.cpp)
 target_link_libraries(fg_adversarial_test PRIVATE FragmentationGovernor)
 add_test(NAME fg_adversarial_test COMMAND fg_adversarial_test)
+
+add_executable(fg_regression_test regression/fg_regression_test.cpp)
+target_link_libraries(fg_regression_test PRIVATE FragmentationGovernor)
+if(WIN32)
+  target_link_libraries(fg_regression_test PRIVATE ws2_32)
+endif()
+add_test(NAME fg_regression_test COMMAND fg_regression_test)
